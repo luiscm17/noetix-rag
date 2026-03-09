@@ -17,7 +17,8 @@ class Document:
     title: str
     file_path: str
     page_count: int
-    processed_at: Optional[datetime] = None
+    processed: bool = False
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     tags: Optional[List[str]] = None
     status: DocumentStatus = DocumentStatus.PENDING
