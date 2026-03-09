@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from api.routes import health_router
+from src.api.routes import health_router
 
 def create_app() -> FastAPI:
     app = FastAPI(
