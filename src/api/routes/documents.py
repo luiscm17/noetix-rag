@@ -12,6 +12,18 @@ router = APIRouter()
 def get_repo() -> DocumentRepositoryBlob:
     return DocumentRepositoryBlob()
 
+@router.get("/")
+async def list_documents(repo: DocumentRepositoryBlob = Depends(get_repo)):
+    documents = repo.list_documents()
+    return {"documents": documents}
+
+@router.get("/{document_id}")
+async def get_document(document_id: int, repo: DocumentRepositoryBlob = Depends(get_repo)):
+    document = repo.get_document(document_id)
+    if document:
+        return {"document": document}
+    return {"message": "Document not found"}, 404
+
 
 @router.post("/upload")
 async def upload_document(
@@ -33,7 +45,3 @@ async def upload_document(
     }
 
 
-@router.get("/")
-async def list_documents(repo: DocumentRepositoryBlob = Depends(get_repo)):
-    documents = repo.list_documents()
-    return {"documents": documents}
