@@ -13,3 +13,11 @@ class IDocumentRepository(Protocol):
     async def list_documents(self) -> List[Document]:
         """List all documents."""
         raise NotImplementedError("list_documents must be implemented by concrete class")
+    
+    # async def update_document(self, document: Document) -> Document:
+    #     """Actualiza el estado de un documento."""
+    #     pass
+
+    # async def delete_document(self, document_id: int) -> bool:
+    #     """Elimina un documento por ID."""
+    #     pass
