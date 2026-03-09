@@ -44,3 +44,31 @@ class AgentSettings:
             raise ValueError("OLLAMA_MODEL_ID is not configured")
         if not cls.OLLAMA_ENDPOINT:
             raise ValueError("OLLAMA_ENDPOINT is not configured")
+        
+
+class BlobStorageSettings:
+    """Configuration for Storage"""
+    
+    # Azure Blob Storage Settings
+    AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+    AZURE_STORAGE_CONTAINER = os.getenv("AZURE_STORAGE_CONTAINER")
+    
+    @classmethod
+    def azure_storage_settings(cls):
+        """Validate that Azure Storage configurations are present"""
+        if not cls.AZURE_STORAGE_CONNECTION_STRING:
+            raise ValueError("AZURE_STORAGE_CONNECTION_STRING is not configured")
+        if not cls.AZURE_STORAGE_CONTAINER:
+            raise ValueError("AZURE_STORAGE_CONTAINER is not configured")
+        
+class DBSettings:
+    """Configuration for Database"""
+    
+    # Database Settings
+    DATABASE_URL = os.getenv("DATABASE_URL")
+    
+    @classmethod
+    def database_settings(cls):
+        """Validate that Database configurations are present"""
+        if not cls.DATABASE_URL:
+            raise ValueError("DATABASE_URL is not configured")
