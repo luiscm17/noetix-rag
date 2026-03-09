@@ -1,7 +1,7 @@
 from typing import Optional, List
 from azure.storage.blob import BlobServiceClient
 from src.domain.entities.document import Document
-from src.config.settings import StorageSettings
+from src.config.settings import BlobStorageSettings
 
 
 class DocumentRepositoryBlob:
@@ -10,8 +10,8 @@ class DocumentRepositoryBlob:
         connection_string: str | None = None,
         container_name: str | None = None,
     ):
-        conn_str = connection_string or StorageSettings.AZURE_STORAGE_CONNECTION_STRING
-        container = container_name or StorageSettings.AZURE_STORAGE_CONTAINER
+        conn_str = connection_string or BlobStorageSettings.AZURE_STORAGE_CONNECTION_STRING
+        container = container_name or BlobStorageSettings.AZURE_STORAGE_CONTAINER
 
         if not conn_str:
             raise ValueError("AZURE_STORAGE_CONNECTION_STRING is not configured")
