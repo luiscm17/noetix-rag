@@ -1,3 +1,4 @@
+-- Active: 1773083993705@@127.0.0.1@5432@neotix_db
 # mh-agent API Testing
 # Instructions:
 # 1. Start the server: uv run uvicorn src.main:app --reload
@@ -7,7 +8,7 @@
 # 5. Use this file in VS Code with REST Client extension or run with curl
 
 @baseUrl = http://127.0.0.1:8000/api
-
+@token = your_access_token_here
 # ============================================
 # HEALTH ENDPOINTS
 # ============================================
@@ -19,7 +20,7 @@ GET {{baseUrl}}/health
 GET http://127.0.0.1:8000/
 
 # ============================================
-# AUTH ENDPOINTS
+# AUTH ENDPOINTS (Public - No auth required)
 # ============================================
 
 ### Register new user (success)
@@ -70,7 +71,7 @@ Content-Type: application/json
   "email": "testuser4@example.com"
 }
 
-### Login with correct credentials (success)
+### Login with correct credentials (success) - Copy access_token from response
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
@@ -98,21 +99,24 @@ Content-Type: application/json
 }
 
 # ============================================
-# DOCUMENTS ENDPOINTS
+# DOCUMENTS ENDPOINTS (Requires Auth)
 # ============================================
 
-### List all documents (empty)
+### List all documents
 GET {{baseUrl}}/documents/
+Authorization: Bearer {{token}}
 
-### List documents with auth (after login)
-GET {{baseUrl}}/documents/
-Authorization: Bearer <TOKEN>
+### Get document by ID
+GET {{baseUrl}}/documents/1
+Authorization: Bearer {{token}}
 
 ### Get document by ID (not found)
 GET {{baseUrl}}/documents/99999
+Authorization: Bearer {{token}}
 
-### Upload document (requires file)
+### Upload document
 POST {{baseUrl}}/documents/upload
+Authorization: Bearer {{token}}
 Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
 
 ------WebKitFormBoundary
@@ -120,27 +124,20 @@ Content-Disposition: form-data; name="file"; filename="test.pdf"
 Content-Type: application/pdf
 
 {{/home/luis-cm/Documents/Github/mh-agent/resources/doc-demo.pdf}}
-------WebKitFormBoundary
-Content-Disposition: form-data; name="title"
-
-Test Document
 ------WebKitFormBoundary--
 
-### Upload document with auth
-POST {{baseUrl}}/documents/upload
-Authorization: Bearer <TOKEN>
-Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+### Update document title
+PATCH {{baseUrl}}/documents/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
 
-------WebKitFormBoundary
-Content-Disposition: form-data; name="file"; filename="test.pdf"
-Content-Type: application/pdf
+{
+  "title": "Updated Document Title"
+}
 
-{{/home/luis-cm/Documents/Github/mh-agent/resources/doc-demo.pdf}}
-------WebKitFormBoundary
-Content-Disposition: form-data; name="title"
-
-My Test Document
-------WebKitFormBoundary--
+### Delete document
+DELETE {{baseUrl}}/documents/1
+Authorization: Bearer {{token}}
 
 # ============================================
 # CURL EXAMPLES
@@ -154,17 +151,26 @@ My Test Document
 #   -H "Content-Type: application/json" \
 #   -d '{"email":"test@example.com","username":"testuser","password":"password123"}'
 
-# Login
+# Login and copy the access_token
 # curl -X POST http://127.0.0.1:8000/api/auth/login \
 #   -H "Content-Type: application/json" \
 #   -d '{"email":"test@example.com","password":"password123"}'
 
-# List documents with token
+# List documents (replace YOUR_TOKEN with access_token from login)
 # curl http://127.0.0.1:8000/api/documents/ \
-#   -H "Authorization: Bearer YOUR_TOKEN_HERE"
+#   -H "Authorization: Bearer YOUR_TOKEN"
 
 # Upload document
 # curl -X POST http://127.0.0.1:8000/api/documents/upload \
-#   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-#   -F "file=@./test.pdf" \
-#   -F "title=My Document"
+#   -H "Authorization: Bearer YOUR_TOKEN" \
+#   -F "file=@./test.pdf"
+
+# Update document
+# curl -X PATCH http://127.0.0.1:8000/api/documents/1 \
+#   -H "Authorization: Bearer YOUR_TOKEN" \
+#   -H "Content-Type: application/json" \
+#   -d '{"title":"New Title"}'
+
+# Delete document
+# curl -X DELETE http://127.0.0.1:8000/api/documents/1 \
+#   -H "Authorization: Bearer YOUR_TOKEN"
