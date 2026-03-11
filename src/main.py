@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from src.api.routes import health_router, documents_router
+from src.api.routes import health_router, documents_router, auth_router
 
 app = FastAPI(
     title="API PDF Reader",
@@ -8,6 +8,7 @@ app = FastAPI(
 )
 
 app.include_router(health_router, prefix="/api", tags=["Health"])
+app.include_router(auth_router, prefix="/api", tags=["Auth"])
 app.include_router(documents_router, prefix="/api/documents", tags=["Documents"])
 
 

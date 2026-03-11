@@ -1,36 +1,34 @@
-from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from enum import Enum
 
-class DocumentStatus(Enum):
+
+class DocumentStatus(str, Enum):
     PENDING = "pending"
     PROCESSING = "processing"
     PROCESSED = "processed"
     ERROR = "error"
 
 
+class Document(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
-@dataclass
-class Document:
-    document_id: int
-    title: str
-    file_path: str
-    page_count: int
-    processed: bool = False
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    tags: Optional[List[str]] = None
-    status: DocumentStatus = DocumentStatus.PENDING
-    error_message: Optional[str] = None
+    document_id: Optional[int] = Field(default=None, description="Document ID")
+    title: str = Field(..., min_length=4, max_length=255, description="Document title")
+    file_path: str = Field(..., description="File path")
+    page_count: int = Field(0, ge=0, description="Number of pages")
+    created_at: Optional[datetime] = Field(default=None, description="Created at")
+    updated_at: Optional[datetime] = Field(default=None, description="Updated at")
+    tags: Optional[List[str]] = Field(default=None, description="Tags")
+    status: DocumentStatus = Field(
+        default=DocumentStatus.PENDING, description="Document status"
+    )
+    error_message: Optional[str] = Field(default=None, description="Error message")
 
-
-@dataclass
-class DocumentChunk:
-    id: int
-    document_id: int
-    content: str
-    page_number: int
-    bbox: Optional[List[int]] = None
-    section: Optional[str] = None
-    embedding: Optional[List[float]] = None
+    @field_validator("title")
+    @classmethod
+    def validate_title(cls, v):
+        if not v or v.strip() == "":
+            raise ValueError("Title cannot be empty")
+        return v

@@ -6,11 +6,12 @@ from typing import Optional
 
 
 class UserModel(Base):
+    """Database model for users."""
     __tablename__ = "users"
 
     user_id: Mapped[int] = mapped_column(primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    user_name: Mapped[str] = mapped_column(String(100), index=True)
+    username: Mapped[str] = mapped_column(String(100), index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[str] = mapped_column(String(50), default="user")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -21,6 +22,7 @@ class UserModel(Base):
 
 
 class DocumentModel(Base):
+    """Database model for documents."""
     __tablename__ = "documents"
 
     document_id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -40,6 +42,7 @@ class DocumentModel(Base):
 
 
 class ConversationModel(Base):
+    """Database model for conversations."""
     __tablename__ = "conversations"
 
     conversation_id: Mapped[str] = mapped_column(
@@ -59,6 +62,7 @@ class ConversationModel(Base):
 
 
 class MessageModel(Base):
+    """Database model for messages."""
     __tablename__ = "messages"
 
     message_id: Mapped[int] = mapped_column(primary_key=True, index=True)

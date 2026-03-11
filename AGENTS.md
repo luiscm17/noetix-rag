@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Python-based AI agent project using FastAPI and `agent-framework`. Supports multiple AI providers (OpenAI, Azure AI Foundry, Ollama).
+Python-based AI agent project using FastAPI. Supports multiple AI providers (OpenAI, Azure AI Foundry, Ollama).
 
 - **Python**: 3.13+ | **Package Manager**: uv | **Framework**: FastAPI
 
@@ -11,62 +11,41 @@ Python-based AI agent project using FastAPI and `agent-framework`. Supports mult
 ## Build, Lint, and Test Commands
 
 ### Installation & Running
-
 ```bash
-uv sync                                    # Install dependencies
-uv run python main.py                      # Run main app
-uv run uvicorn src.main:app --reload       # Run FastAPI server
+uv sync                           # Install dependencies
+uv run python -m src.main         # Run main app
+uv run uvicorn src.main:app --reload  # Run with hot reload
+cp .env.example .env              # Set up environment variables
 ```
 
 ### Linting & Type Checking
-
 ```bash
-uv run ruff check .                        # Lint with ruff
-uv run ruff format .                       # Format code
-uv run mypy src/                           # Type check with mypy
+uv run ruff check .               # Lint with ruff
+uv run ruff format .              # Format code
+uv run mypy src/                 # Type check with mypy
 ```
 
 ### Testing
-
 ```bash
-uv run pytest                              # Run all tests
-uv run pytest tests/test_file.py           # Run single test file
-uv run pytest tests/test_file.py::test_fn  # Run single test function
-uv run pytest -k "pattern"                 # Run tests matching pattern
-uv run pytest -v                           # Verbose output
-uv run pytest -m "marker"                  # Run tests with specific marker
-uv run pytest --tb=short                   # Shorter traceback output
-uv run pytest --cov=src --cov-report=html  # With coverage
+uv run pytest                             # Run all tests
+uv run pytest tests/unit/                 # Run unit tests (recommended)
+uv run pytest tests/test_file.py          # Run single test file
+uv run pytest tests/test_file.py::test_fn # Run single test function
+uv run pytest -k "pattern"                # Run tests matching pattern
+uv run pytest -v                          # Verbose output
 ```
 
 ### Database Migrations (Alembic)
-
 ```bash
-uv run alembic current                     # Check current migration
-uv run alembic upgrade head                # Run all pending migrations
-uv run alembic downgrade -1                # Rollback last migration
-uv run alembic revision --autogenerate -m "create users table"  # Create new migration
+uv run alembic current                    # Check current migration
+uv run alembic upgrade head               # Run pending migrations
+uv run alembic downgrade -1               # Rollback last migration
+uv run alembic revision --autogenerate -m "message"  # Create migration
 ```
 
-### Development Workflow
-
+### Before Committing
 ```bash
-uv run python main.py                      # Run main app
-uv run uvicorn src.main:app --reload       # Run FastAPI server with hot reload
-cp .env.example .env                       # Set up environment variables
-```
-
----
-
-## Before Committing
-
-Always verify your changes before committing:
-
-```bash
-uv run ruff check .    # Lint
-uv run ruff format .   # Format
-uv run mypy src/       # Type check
-uv run pytest          # Run tests
+uv run ruff check . && uv run ruff format . && uv run mypy src/ && uv run pytest tests/unit/
 ```
 
 ---
@@ -74,7 +53,7 @@ uv run pytest          # Run tests
 ## Code Style Guidelines
 
 ### Imports
-- Use **absolute imports**: `from config.settings import AgentSettings`
+- Use **absolute imports**: `from src.config.settings import AuthSettings`
 - Order: standard library → third-party → local application
 - Use explicit relative imports for intra-package: `from . import module`
 - **No wildcard imports** (`from x import *`)
@@ -84,111 +63,94 @@ uv run pytest          # Run tests
 | Element | Convention | Example |
 |---------|------------|---------|
 | Functions/Variables | snake_case | `def get_settings()` |
-| Classes | PascalCase | `class TeacherAgent` |
+| Classes | PascalCase | `class UserRepository` |
 | Constants | UPPER_SNAKE_CASE | `MAX_RETRIES = 5` |
-| Files (modules) | snake_case | `base_agent.py` |
-| Async functions | `async def` | `async def build(...)` |
+| Files | snake_case | `base_agent.py` |
+| Interfaces (Ports) | PascalCase with `I` prefix | `class IUserRepository` |
 
-### Type Hints
+### Type Hints & Async
 - **Always use type hints** for parameters and return types
-- Use `typing` module for complex types: `list[str] | None`, `dict[str, Any]`
-- Avoid `Any` unless absolutely necessary
+- Use `Optional[X]` for compatibility: `Optional[str]`
+- Use `async def` for I/O operations, always `await` - never `.result()`
+- Mark async test functions with `@pytest.mark.asyncio`
 
-### Async/Await
-- Use `async def` for I/O operations
-- Always `await` async functions - never `.result()` or `.wait()`
-- Use `asyncio` for concurrent operations when appropriate
-
-### Docstrings
-- Use triple double-quotes `"""`
-- Present tense, third person
-- Include Args/Returns/Raises for complex functions
+### Pydantic Models
+- Use `model_config = ConfigDict(...)` instead of `class Config`
+- Example:
+```python
+class User(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    user_id: Optional[int] = Field(default=None)
+    email: EmailStr
+```
 
 ### Error Handling
 - Use specific exception types (`ValueError`, `RuntimeError`, etc.)
 - Provide descriptive error messages
 - Validate inputs at function entry points
 
-### Class Structure
-- Use ABC for interfaces with `@abstractmethod`
-- Keep classes focused on single responsibility
-- Use dependency injection for external services
-
 ---
 
-## Project Structure
+## Project Structure (Clean Architecture)
 
 ```
-mh-agent/
-├── src/
-│   ├── agents/           # Agent implementations
-│   ├── api/routes/      # FastAPI routes (health.py, documents.py)
-│   ├── config/           # Configuration modules
-│   │   └── settings.py  # DBSettings with DATABASE_URL
-│   ├── domain/           # Domain layer (entities, interfaces, services)
-│   ├── infrastructure/  # Repository implementations
-│   │   └── db/
-│   │       └── connection.py  # SQLAlchemy engine & session
-│   └── main.py           # Application entry point
-├── migrations/           # Alembic migrations
-├── tests/                # Test files
-├── alembic.ini          # Alembic configuration
-├── pyproject.toml
-├── .env
-└── .python-version
+src/
+├── config/              # Settings, dependencies
+├── domain/             # Entities, interfaces (ports)
+├── application/        # Use cases (business logic)
+├── infrastructure/     # Adapters (repositories, services)
+├── api/routes/         # FastAPI endpoints
+└── agents/             # AI Agents
+tests/
+├── unit/               # Fast, no external deps
+├── integration/        # Requires PostgreSQL + Azurite
+└── http/               # REST Client tests
+migrations/
 ```
 
----
+### Key Patterns
 
-## Architecture
+**Interface Pattern**: `class IUserRepository(ABC): @abstractmethod ...`
 
-This project follows **Clean Architecture** with domain-driven design principles:
-- **Domain Layer**: Entities, interfaces, business rules (no external dependencies)
-- **Infrastructure Layer**: Repository implementations, external services
-- **API Layer**: FastAPI routes, dependency injection
-- **Agents Layer**: AI agent implementations using `agent-framework`
-
----
-
-## Skills
-
-Available in `.agents/skills/`:
-- `agent-orchestration` - Multi-agent coordination
-- `ai-agents-architect` - Designing autonomous AI agents
-- `microsoft-agent-framework` - Microsoft Agent Framework
-- `rag-engineer` - Retrieval-Augmented Generation
-- `architecture-patterns` - Clean Architecture, Hexagonal, DDD
-- `brainstorming` - Feature creation and requirements
-- `systematic-debugging` - Bug investigation and fixing
-
----
-
-## Common Patterns
-
-### Provider Pattern (AI Backends)
+**Use Case Pattern**:
 ```python
-class OpenAIProvider(BaseAgent):
-    async def build(self, name: str, instructions: str, tools: list | None = None):
-        client = OpenAIChatClient(
-            model_id=AgentSettings.OPENAI_MODEL_ID,
-            base_url=AgentSettings.OPENAI_ENDPOINT,
-            api_key=AgentSettings.OPENAI_API_KEY,
-        ).as_agent(name=name, instructions=instructions, tools=tools or [])
-        return client
+class RegisterUserUseCase:
+    def __init__(self, user_repo: IUserRepository, hasher: IPasswordHasher):
+        self._user_repo = user_repo
+    
+    def execute(self, request: RegisterUserRequest) -> RegisterUserResponse:
+        ...
 ```
 
-### Repository Pattern
+**Dependency Injection**:
 ```python
-class BlobDocumentRepository(DocumentRepository):
-    def __init__(self, container_client: ContainerClient):
-        self._container = container_client
+def get_user_repository(session: Session = Depends(get_db)) -> IUserRepository:
+    return UserRepository(session)
 ```
 
-### Testing Async Agents
+---
+
+## Testing Guidelines
+
+### Unit Tests
+- Use mocks for external services (repositories, hashers)
+- Test use cases, services, entities, interfaces
+- Run fast, no external dependencies
+
+### Integration Tests
+- Use FastAPI TestClient with `app.dependency_overrides`
+- Require PostgreSQL and Azurite running
+
+### Mocking Pattern
 ```python
-@pytest.mark.asyncio
-async def test_teacher_agent_run():
-    agent = await teacher_agent()
-    result = await agent.run("What is Python?")
-    assert result is not None
+app.dependency_overrides[get_user_repository] = lambda: mock_repo
 ```
+
+---
+
+## Common Issues
+
+- Run `alembic upgrade head` after creating new models
+- Import models in `migrations/env.py`: `from src.infrastructure.db import models`
+- Clear `app.dependency_overrides` in `teardown_method`
+- Use unique emails in tests to avoid DB conflicts

@@ -1,0 +1,170 @@
+# mh-agent API Testing
+# Instructions:
+# 1. Start the server: uv run uvicorn src.main:app --reload
+# 2. Start Azurite (blob storage): azurite
+# 3. Start PostgreSQL database
+# 4. Run migrations: uv run alembic upgrade head
+# 5. Use this file in VS Code with REST Client extension or run with curl
+
+@baseUrl = http://127.0.0.1:8000/api
+
+# ============================================
+# HEALTH ENDPOINTS
+# ============================================
+
+### Health check
+GET {{baseUrl}}/health
+
+### Root endpoint
+GET http://127.0.0.1:8000/
+
+# ============================================
+# AUTH ENDPOINTS
+# ============================================
+
+### Register new user (success)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "username": "testuser",
+  "password": "password123"
+}
+
+### Register duplicate email (should fail)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "username": "anotheruser",
+  "password": "password456"
+}
+
+### Register with invalid email (should fail)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "not-an-email",
+  "username": "testuser2",
+  "password": "password123"
+}
+
+### Register with short password (should fail)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "testuser3@example.com",
+  "username": "testuser3",
+  "password": "123"
+}
+
+### Register with missing fields (should fail)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "testuser4@example.com"
+}
+
+### Login with correct credentials (success)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "password": "password123"
+}
+
+### Login with wrong password (should fail)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "password": "wrongpassword"
+}
+
+### Login with non-existent email (should fail)
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "nonexistent@example.com",
+  "password": "password123"
+}
+
+# ============================================
+# DOCUMENTS ENDPOINTS
+# ============================================
+
+### List all documents (empty)
+GET {{baseUrl}}/documents/
+
+### List documents with auth (after login)
+GET {{baseUrl}}/documents/
+Authorization: Bearer <TOKEN>
+
+### Get document by ID (not found)
+GET {{baseUrl}}/documents/99999
+
+### Upload document (requires file)
+POST {{baseUrl}}/documents/upload
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="file"; filename="test.pdf"
+Content-Type: application/pdf
+
+{{/home/luis-cm/Documents/Github/mh-agent/resources/doc-demo.pdf}}
+------WebKitFormBoundary
+Content-Disposition: form-data; name="title"
+
+Test Document
+------WebKitFormBoundary--
+
+### Upload document with auth
+POST {{baseUrl}}/documents/upload
+Authorization: Bearer <TOKEN>
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary
+
+------WebKitFormBoundary
+Content-Disposition: form-data; name="file"; filename="test.pdf"
+Content-Type: application/pdf
+
+{{/home/luis-cm/Documents/Github/mh-agent/resources/doc-demo.pdf}}
+------WebKitFormBoundary
+Content-Disposition: form-data; name="title"
+
+My Test Document
+------WebKitFormBoundary--
+
+# ============================================
+# CURL EXAMPLES
+# ============================================
+
+# Health check
+# curl http://127.0.0.1:8000/api/health
+
+# Register user
+# curl -X POST http://127.0.0.1:8000/api/auth/register \
+#   -H "Content-Type: application/json" \
+#   -d '{"email":"test@example.com","username":"testuser","password":"password123"}'
+
+# Login
+# curl -X POST http://127.0.0.1:8000/api/auth/login \
+#   -H "Content-Type: application/json" \
+#   -d '{"email":"test@example.com","password":"password123"}'
+
+# List documents with token
+# curl http://127.0.0.1:8000/api/documents/ \
+#   -H "Authorization: Bearer YOUR_TOKEN_HERE"
+
+# Upload document
+# curl -X POST http://127.0.0.1:8000/api/documents/upload \
+#   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+#   -F "file=@./test.pdf" \
+#   -F "title=My Document"
