@@ -1,7 +1,6 @@
-# Arquitectura - Noetix AI
+# Arquitectura - mh-agent
 
-**Versión**: 1.0  
-**Enfoque**: MVP funcional con Microsoft Agent Framework
+**Enfoque**: Clean Architecture + Domain-Driven Design
 
 ---
 
@@ -9,22 +8,41 @@
 
 ### 1.1 Propósito
 
-Esta arquitectura define cómo el usuario interactúa con documentos PDF mediante un tutor socrático impulsado por IA. El sistema sigue el principio KISS: simplicidad sin sacrificar funcionalidad.
+Arquitectura basada en Clean Architecture para un sistema de tutoría socrática con IA. El sistema permite a los usuarios subir documentos PDF y interactuar con ellos mediante un agente inteligente.
 
 ### 1.2 Principios Fundamentales
 
-| Principio              | Descripción                                   |
-| ---------------------- | --------------------------------------------- |
-| **Backend Mínimo**     | Solo CRUD de usuarios y documentos            |
-| **Agente Inteligente** | MAF maneja RAG, memoria y contexto            |
-| **Separación Clara**   | Backend ≠ Agente ≠ Infraestructura            |
-| **Escalabilidad**      | De local (ChromaDB) a cloud (Azure AI Search) |
+| Principio                           | Descripción                                |
+| ----------------------------------- | ------------------------------------------ |
+| **Domain Puro**                     | Entidades sin dependencias externas        |
+| **Use Cases**                       | Orquestan la lógica de negocio             |
+| **Inversión de Dependencias**       | Las dependencias apuntan hacia el interior |
+| **Separación de Responsabilidades** | Cada capa tiene una responsabilidad única  |
+| **Testabilidad**                    | Cada capa puede probarse en aislamiento    |
 
 ---
 
 ## 2. Arquitectura del Sistema
 
-### 2.1 Diagrama de Componentes
+### 2.1 Capas de Clean Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Presentation Layer                       │
+│              (API Routes, Controllers, DTOs)                │
+├─────────────────────────────────────────────────────────────┤
+│                    Application Layer                        │
+│                    (Use Cases / Services)                   │
+├─────────────────────────────────────────────────────────────┤
+│                      Domain Layer                           │
+│            (Entities, Value Objects, Interfaces)            │
+├─────────────────────────────────────────────────────────────┤
+│                   Infrastructure Layer                      │
+│        (Repositories, External Services, Frameworks)       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 2.2 Diagrama de Componentes
 
 ```mermaid
 graph TB
@@ -40,15 +58,23 @@ graph TB
         CHAT[Chat: Streaming Endpoint]
     end
     
-    subgraph "Agente (Microsoft Agent Framework)"
-        TUTOR[Tutor Socrático]
-        TOOLS[Tools]
-        MEM[Memoría / Historial]
+    subgraph "Application Layer"
+        USE[Use Cases]
     end
     
-    subgraph "Infraestructura"
+    subgraph "Domain Layer"
+        ENT[Entities]
+        INT[Interfaces]
+    end
+    
+    subgraph "Infrastructure Layer"
+        REP[Repositories]
+        SVC[Services]
+    end
+    
+    subgraph "Infraestructura Externa"
         BLOB[(Azure Blob Storage)]
-        DB[(SQLite/Postgres)]
+        DB[(PostgreSQL)]
         CHROMA[(ChromaDB)]
         LLM[LLM: Ollama/OpenAI/Foundry]
     end
@@ -56,295 +82,307 @@ graph TB
     UI --> AUTH
     UI --> DOCS
     UI --> CHAT
-    CHAT --> TUTOR
-    TUTOR --> TOOLS
-    TOOLS --> CHROMA
-    TUTOR --> LLM
-    TUTOR --> MEM
-    DOCS --> BLOB
-    DOCS --> DB
-    AUTH --> DB
-```
-
-### 2.2 Flujo de Datos
-
-```mermaid
-sequenceDiagram
-    participant U as Usuario
-    participant F as Frontend
-    participant B as Backend
-    participant A as Agente MAF
-    participant I as Infractructura
-
-    rect rgb(240, 248, 255)
-        Note over U,A: FLUJO: Autenticación
-        U->>F: Ingresa credenciales
-        F->>B: POST /auth/login
-        B->>I: Valida usuario
-        I-->>B: JWT Token
-        B-->>F: Token
-        F->>U: Sesión iniciada
-    end
-
-    rect rgb(255, 250, 240)
-        Note over U,A: FLUJO: Subir Documento
-        U->>F: Sube PDF
-        F->>B: POST /documents/upload
-        B->>I: Save to Blob Storage
-        B->>I: Save metadata to DB
-        B-->>F: document_id + status
-        F-->>U: "Procesando..."
-    end
-
-    rect rgb(240, 255, 240)
-        Note over U,A: FLUJO: Chat
-        U->>F: Pregunta sobre PDF
-        F->>B: POST /chat (with JWT)
-        B->>A: Forward query + context
-        A->>I: search_document (tool)
-        I-->>A: Chunks relevantes
-        A->>I: Get completion (LLM)
-        I-->>A: Streaming response
-        A-->>B: SSE Stream
-        B-->>F: Token por token
-        F-->>U: Respuesta socrática
-    end
+    CHAT --> USE
+    USE --> ENT
+    USE --> INT
+    INT --> REP
+    REP --> DB
+    REP --> BLOB
+    SVC --> CHROMA
+    SVC --> LLM
 ```
 
 ---
 
 ## 3. Responsabilidades por Capa
 
-### 3.1 Backend (FastAPI)
+### 3.1 Domain Layer (Capa de Dominio)
 
-| Recurso       | Endpoints                                 | Responsabilidad                 |
-| ------------- | ----------------------------------------- | ------------------------------- |
-| **Auth**      | `POST /auth/register`, `POST /auth/login` | Gestión de usuarios y JWT       |
-| **Documents** | CRUD completo                             | Biblioteca personal del usuario |
-| **Chat**      | `POST /chat`                              | Gateway al agente con streaming |
+**Responsabilidad**: Reglas de negocio puras, sin dependencias externas.
 
-**Importante**: El backend NO procesa documentos ni consulta ChromaDB. Esa responsabilidad es del agente.
+| Componente        | Descripción                                                            |
+| ----------------- | ---------------------------------------------------------------------- |
+| **Entities**      | User, Document, Conversation                                           |
+| **Value Objects** | Email, Password (inmutables)                                           |
+| **Interfaces**    | IUserRepository, IDocumentRepository, IPasswordHasher, ITokenGenerator |
 
-### 3.2 Agente (Microsoft Agent Framework)
+**Reglas**:
 
-| Componente          | Responsabilidad                        |
-| ------------------- | -------------------------------------- |
-| **Tutor Socrático** | Genera respuestas con preguntas guía   |
-| **Tools**           | Pipeline RAG, búsqueda en ChromaDB     |
-| **Memoria**         | Historial de conversaciones y sesiones |
+- Sin imports de frameworks (no pydantic, no jwt, no sqlalchemy)
+- Solo lógica de negocio
+- Métodos que representan reglas del dominio
 
-El agente accede a ChromaDB **directamente** mediante tools, no a través del backend.
+### 3.2 Application Layer (Capa de Aplicación)
 
-### 3.3 Infraestructura
+**Responsabilidad**: Orquestar casos de uso, coordinar entidades y servicios.
 
-| Servicio            | Uso                                              |
-| ------------------- | ------------------------------------------------ |
-| **Blob Storage**    | Almacenamiento de PDFs                           |
-| **SQLite/Postgres** | Metadatos de usuarios y documentos               |
-| **ChromaDB**        | Vector store para RAG                            |
-| **LLM**             | Generación de respuestas (Ollama/OpenAI/Foundry) |
+| Componente    | Descripción                                            |
+| ------------- | ------------------------------------------------------ |
+| **Use Cases** | RegisterUser, LoginUser, UploadDocument, ListDocuments |
+| **DTOs**      | Objetos para transferencia entre capas                 |
+
+**Reglas**:
+
+- Inyecta dependencias (repositories, services)
+- No contiene lógica de negocio directa
+- Coordina flujo de datos
+
+### 3.3 Infrastructure Layer (Capa de Infraestructura)
+
+**Responsabilidad**: Implementaciones concretas de los puertos.
+
+| Componente       | Descripción                              |
+| ---------------- | ---------------------------------------- |
+| **Repositories** | SQLUserRepository, SQLDocumentRepository |
+| **Services**     | BcryptHasher, JWTGenerator               |
+| **Storage**      | AzureBlobAdapter                         |
+
+**Reglas**:
+
+- Implementa interfaces definidas en domain
+- Maneja dependencias externas (DB, Storage, AI)
+- Framework-specific
+
+### 3.4 Presentation Layer (Capa de Presentación)
+
+**Responsabilidad**: Exponer la API al exterior.
+
+| Componente       | Descripción                        |
+| ---------------- | ---------------------------------- |
+| **Routes**       | FastAPI endpoints                  |
+| **Schemas**      | Pydantic models (request/response) |
+| **Dependencies** | FastAPI dependency injection       |
 
 ---
 
-## 4. Estructura de Proyecto
+## 4. Estructura del Proyecto
 
-### 4.1 Organización de Código (Estado Actual)
+### 4.1 Organización de Código
 
-```yml
+```
 src/
-├── config/
-│   └── settings.py            # ✅ Implementado
+├── config/                      # Configuración global
+│   ├── __init__.py
+│   ├── settings.py             # Configuraciones (JWT, DB, Blob, AI)
+│   └── dependencies.py         # Proveedores de dependencias FastAPI
 │
-├── domain/
-│   └── entities/             # ✅ Implementado
-│       ├── user.py
-│       ├── document.py
-│       └── conversation.py
+├── domain/                      # DOMINIO (puro, sin dependencias externas)
+│   ├── __init__.py
+│   ├── entities/               # Entidades del negocio
+│   │   ├── __init__.py
+│   │   ├── user.py            # User entity
+│   │   ├── document.py        # Document entity
+│   │   └── conversation.py     # Conversation entity
+│   │
+│   ├── value_objects/          # Objetos valor (inmutables)
+│   │   ├── __init__.py
+│   │   ├── email.py           # Email validado
+│   │   └── password.py        # Password (sin hashing)
+│   │
+│   └── interfaces/             # PUERTOS (contratos)
+│       ├── __init__.py
+│       ├── user_repository.py     # IUserRepository
+│       ├── document_repository.py # IDocumentRepository
+│       ├── password_hasher.py     # IPasswordHasher
+│       ├── token_generator.py     # ITokenGenerator
+│       └── blob_storage.py        # IBlobStorage
 │
-├── infrastructure/
-│   └── repositories/         # ✅ Implementado (blob + db)
-│       └── document_repository_blob.py
+├── application/                # APPLICATION LAYER
+│   ├── __init__.py
+│   │
+│   └── use_cases/             # Casos de uso
+│       ├── __init__.py
+│       │
+│       ├── auth/              # Autenticación
+│       │   ├── __init__.py
+│       │   ├── register_user.py
+│       │   ├── login_user.py
+│       │   └── dto.py         # Data Transfer Objects
+│       │
+│       └── documents/         # Gestión documental
+│           ├── __init__.py
+│           ├── upload_document.py
+│           ├── list_documents.py
+│           └── get_document.py
 │
-├── agents/                   # Proveedores LLM existentes
-│   ├── base_agent.py
-│   ├── ollama_provider.py
-│   ├── openai_provider.py
-│   └── ai_project_provider.py
+├── infrastructure/             # INFRASTRUCTURE (adaptadores)
+│   ├── __init__.py
+│   │
+│   ├── database/              # Configuración DB
+│   │   ├── __init__.py
+│   │   ├── connection.py      # SQLAlchemy engine/session
+│   │   ├── models.py          # ORM Models
+│   │   └── mappers.py         # Entity <-> Model mappers
+│   │
+│   ├── repositories/          # Implementación de repositorios
+│   │   ├── __init__.py
+│   │   ├── sql_user_repository.py
+│   │   └── sql_document_repository.py
+│   │
+│   ├── services/              # Servicios externos
+│   │   ├── __init__.py
+│   │   ├── bcrypt_hasher.py   # Implementación IPasswordHasher
+│   │   └── jwt_generator.py   # Implementación ITokenGenerator
+│   │
+│   └── storage/               # Storage adapters
+│       ├── __init__.py
+│       └── azure_blob_adapter.py
 │
-├── api/
-│   ├── routes/
-│   │   ├── documents.py     # ✅ Implementado (upload, list, get)
+├── api/                       # PRESENTATION LAYER
+│   ├── __init__.py
+│   │
+│   ├── routes/               # FastAPI routes
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   ├── documents.py
 │   │   └── health.py
-│   └── dependencies.py
+│   │
+│   ├── schemas/              # Pydantic schemas (request/response)
+│   │   ├── __init__.py
+│   │   ├── auth.py
+│   │   └── documents.py
+│   │
+│   └── dependencies.py       # FastAPI dependencies
 │
-└── main.py                   # ✅ Implementado
-```
-
-> **Nota**: La estructura se simplifica para el MVP. Los servicios de dominio y repositorios separados se implementarán según necesidad.
-
-### 4.2 Frontend (Next.js)
-
-```yml
-frontend/
-├── app/
-│   ├── auth/              # Login/Register
-│   ├── dashboard/         # Biblioteca de documentos
-│   └── reader/           # Visor PDF + Chat
+├── agents/                    # Agentes AI (integración con MAF)
+│   ├── __init__.py
+│   ├── base_agent.py
+│   ├── providers/
+│   │   ├── __init__.py
+│   │   ├── openai_provider.py
+│   │   ├── ollama_provider.py
+│   │   └── ai_project_provider.py
+│   └── tools/
+│       ├── __init__.py
+│       ├── document_processor.py
+│       └── semantic_search.py
 │
-└── components/
-    ├── pdf-viewer/       # Visor PDF
-    └── chat/             # Interfaz de chat
+└── main.py                    # Entry point
 ```
 
 ---
 
-## 5. Casos de Uso
+## 5. Flujos de Datos
 
 ### 5.1 Autenticación
 
-```bash
-Usuario → Register → Backend → DB
-Usuario → Login → Backend → JWT → Frontend
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant F as Frontend
+    participant R as API Route
+    participant UC as Use Case
+    participant IR as Interface (Port)
+    participant I as Infrastructure
+
+    U->>F: Credenciales
+    F->>R: POST /auth/register
+    R->>UC: RegisterUserUseCase.execute()
+    UC->>IR: get_by_email()
+    IR->>I: SQLUserRepository.get_by_email()
+    I-->>IR: User?
+    IR-->>UC: User?
+    
+    alt Usuario no existe
+        UC->>IR: hash(password)
+        IR->>I: BcryptHasher.hash()
+        I-->>IR: hashed_password
+        UC->>IR: create(user)
+        IR->>I: SQLUserRepository.create()
+        UC->>IR: generate_token(user)
+        IR->>I: JWTGenerator.generate()
+        I-->>UC: jwt_token
+        UC-->>R: AuthResponse
+        R-->>F: JWT Token
+        F-->>U: Sesión iniciada
+    else Usuario existe
+        UC-->>R: Error: Email ya registrado
+        R-->>F: 400 Bad Request
+    end
 ```
 
-### 5.2 Gestión de Biblioteca
+### 5.2 Gestión de Documentos
 
-| Acción          | Flujo                                     |
-| --------------- | ----------------------------------------- |
-| **Subir PDF**   | Frontend → Backend → Blob + DB            |
-| **Listar**      | Frontend → Backend → DB                   |
-| **Ver detalle** | Frontend → Backend → DB → URL temporal    |
-| **Eliminar**    | Frontend → Backend → Blob + DB + ChromaDB |
-| **Actualizar**  | Frontend → Backend → DB                   |
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant F as Frontend
+    participant R as API Route
+    participant UC as Use Case
+    participant IR as Interface
+    participant I as Infrastructure
 
-### 5.3 Tutoría con IA
-
-```md
-1. Usuario envía pregunta
-2. Backend reenvía al agente (con JWT)
-3. Agente busca contexto en ChromaDB (tool)
-4. Agente genera respuesta socrática
-5. LLM responde con streaming
-6. Backend → Frontend (SSE)
+    U->>F: Sube PDF
+    F->>R: POST /documents/upload
+    R->>UC: UploadDocumentUseCase.execute()
+    
+    UC->>IR: save_blob(content)
+    IR->>I: AzureBlobAdapter.upload()
+    I-->>IR: file_path
+    
+    UC->>IR: create(document)
+    IR->>I: SQLDocumentRepository.create()
+    I-->>IR: document
+    
+    UC-->>R: DocumentResponse
+    R-->>F: document_id
+    F-->>U: "Documento subido"
 ```
 
 ---
 
-## 6. Herramientas del Agente
+## 6. API Reference
 
-### 6.1 Tools Definidas
+### 6.1 Autenticación
 
-| Tool               | Función                                                 |
-| ------------------ | ------------------------------------------------------- |
-| `process_document` | Pipeline RAG: docling → chunking → embedding → ChromaDB |
-| `search_document`  | Búsqueda semántica en ChromaDB                          |
-| `get_document`     | Obtiene metadatos del documento                         |
+| Método | Endpoint         | Descripción   | Uso Case     |
+| ------ | ---------------- | ------------- | ------------ |
+| POST   | `/auth/register` | Crear usuario | RegisterUser |
+| POST   | `/auth/login`    | Login → JWT   | LoginUser    |
 
-### 6.2 Memoria
+### 6.2 Documentos
 
-El agente maneja:
+| Método | Endpoint            | Descripción         | Uso Case       |
+| ------ | ------------------- | ------------------- | -------------- |
+| POST   | `/documents/upload` | Subir PDF           | UploadDocument |
+| GET    | `/documents/`       | Listar biblioteca   | ListDocuments  |
+| GET    | `/documents/{id}`   | Ver detalle         | GetDocument    |
+| PATCH  | `/documents/{id}`   | Actualizar metadata | UpdateDocument |
+| DELETE | `/documents/{id}`   | Eliminar            | DeleteDocument |
 
-- **Historial de conversación**: Accumula contexto
-- **Sesiones**: Mantiene estado entre requests
-- **Almacenamiento**: ChromaDB o Redis
+### 6.3 Chat
 
----
-
-## 7. Decisiones Arquitectónicas
-
-### 7.1 Por qué Backend Mínimo?
-
-1. **MAF ya tiene lo necesario**: Tool calling, memoria, streaming
-2. **Separación de responsabilidades**: Backend = datos, Agente = inteligencia
-3. **Mantenibilidad**: Código simple de mantener
-
-### 7.2 Por qué ChromaDB Local?
-
-- **Desarrollo sin infraestructura cloud**
-- **Configuración mínima**
-- **Compatible con MAF**
-
-> **Post-MVP**: Migrar a Azure AI Search
-
-### 7.3 Por qué Pipeline como Tool?
-
-- **Flexibilidad**: El agente decide cuándo procesar
-- **Reusabilidad**: Puedo invocar desde chat o manualmente
-- **Simplicidad**: No necesita webhook externo (Azure Function)
+| Método | Endpoint | Descripción                      | Uso Case       |
+| ------ | -------- | -------------------------------- | -------------- |
+| POST   | `/chat`  | Streaming de respuesta socrática | ProcessMessage |
 
 ---
 
-## 8. API Reference
+## 7. Seguridad
 
-### 8.1 Autenticación
-
-| Método | Endpoint         | Descripción   |
-| ------ | ---------------- | ------------- |
-| POST   | `/auth/register` | Crear usuario |
-| POST   | `/auth/login`    | Login → JWT   |
-
-### 8.2 Documentos
-
-| Método | Endpoint            | Descripción         |
-| ------ | ------------------- | ------------------- |
-| POST   | `/documents/upload` | Subir PDF           |
-| GET    | `/documents/`       | Listar biblioteca   |
-| GET    | `/documents/{id}`   | Ver detalle         |
-| PATCH  | `/documents/{id}`   | Actualizar metadata |
-| DELETE | `/documents/{id}`   | Eliminar            |
-
-### 8.3 Chat
-
-| Método | Endpoint | Descripción                      |
-| ------ | -------- | -------------------------------- |
-| POST   | `/chat`  | Streaming de respuesta socrática |
+- **JWT Tokens**: Autenticación stateless con expiración configurable
+- **Password Hashing**: Bcrypt con salt
+- **Scoped Access**: Usuarios solo ven sus documentos
+- **Rol Admin**: Gestión de usuarios
 
 ---
 
-## 9. Seguridad
+## 8. Glosario
 
-- **JWT Tokens**: Autenticación stateless
-- **Rol admin**: Gestión de usuarios
-- **Scoped access**: Usuario solo ve sus documentos
-
----
-
-## 10. Roadmap
-
-### MVP (Estado Actual)
-
-| Componente | Estado | Notas |
-|------------|--------|-------|
-| Estructura de directorios | ✅ Completo | |
-| Settings | ✅ Completo | `src/config/settings.py` |
-| Entities | ✅ Completo | User, Document, Conversation |
-| Upload PDF | ✅ Completo | `POST /documents/upload` |
-| List Documents | ✅ Completo | `GET /documents/` |
-| Get Document | ✅ Completo | `GET /documents/{id}` |
-| Auth: Login/Register | ❌ Pendiente | |
-| Delete Document | ❌ Pendiente | |
-| Update Document | ❌ Pendiente | |
-| Chat endpoint | ❌ Pendiente | Gateway al agente MAF |
-| Tools: process_document | ❌ Pendiente | Pipeline RAG |
-| Integración ChromaDB | ❌ Pendiente | |
-
-### Post-MVP
-
-- [ ] Azure AI Search (reemplazo de ChromaDB)
-- [ ] Azure Functions para procesamiento automático
-- [ ] Mejora de prompts socráticos
-- [ ] Resaltado coordinada PDF-Chat
+| Término          | Definición                               |
+| ---------------- | ---------------------------------------- |
+| **Domain**       | Reglas de negocio puro, sin dependencias |
+| **Use Case**     | Orquestador de lógica de aplicación      |
+| **Port**         | Interfaz abstracta en domain             |
+| **Adapter**      | Implementación concreta de un port       |
+| **Entity**       | Objeto con identidad única               |
+| **Value Object** | Obmutable definido por atributos         |
+| **DTO**          | Data Transfer Object                     |
 
 ---
 
-## 11. Glosario
+## 9. Referencias
 
-| Término       | Definición                               |
-| ------------- | ---------------------------------------- |
-| **MAF**       | Microsoft Agent Framework                |
-| **RAG**       | Retrieval-Augmented Generation           |
-| **Tool**      | Función que el agente puede invocar      |
-| **Streaming** | Respuesta token por token en tiempo real |
-| **SSE**       | Server-Sent Events                       |
-
----
+- [Clean Architecture - Robert C. Martin](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+- [Domain-Driven Design - Eric Evans](https://domainlanguage.com/ddd/)
+- [Hexagonal Architecture - Alistair Cockburn](https://alistair.cockburn.us/hexagonal-architecture/)
