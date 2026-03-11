@@ -79,3 +79,16 @@ class DBSettings:
         """Validate that Database configurations are present"""
         if not cls.DATABASE_URL:
             raise ValueError("DATABASE_URL is not configured")
+
+class AuthSettings:
+    """Configuration for Authentication"""
+    
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "secret_key_for_dev_only")
+    JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+    JWT_EXPIRE_DELTA = int(os.getenv("JWT_EXPIRE_DELTA", "1800"))  # Default to 30 minutes
+
+    @classmethod
+    def validate_auth_settings(cls):
+        """Validate that Authentication configurations are present"""
+        if not cls.JWT_SECRET_KEY:
+            raise ValueError("JWT_SECRET_KEY is not configured")
