@@ -5,6 +5,7 @@ from src.config.settings import BlobStorageSettings
 
 
 class DocumentRepositoryBlob:
+    """Adapter: implement the contract of IDocumentRepository using Azure Blob Storage."""
     def __init__(
         self,
         connection_string: str | None = None,
@@ -27,11 +28,13 @@ class DocumentRepositoryBlob:
         except Exception as e:
             print(f"Container already exists: {e}")
 
-    def save_document(self, document: Document, content: bytes) -> None:
+    async def save_document(self, document: Document, content: bytes) -> None:
+        """Save a document to Azure Blob Storage."""
         blob_name = f"{document.document_id}_{document.title}"
         self.container.upload_blob(name=blob_name, data=content, overwrite=True)
 
-    def get_document(self, document_id: int) -> Optional[Document]:
+    async def get_document(self, document_id: int) -> Optional[Document]:
+        """Retrieve a document by ID from Azure Blob Storage."""
         blobs = self.container.list_blobs()
         for blob in blobs:
             if blob.name.startswith(f"{document_id}_"):
@@ -40,11 +43,11 @@ class DocumentRepositoryBlob:
                     title=blob.name.split("_", 1)[1],
                     file_path=blob.name,
                     page_count=0,
-                    processed_at=None,
                 )
         return None
 
     def list_documents(self) -> List[Document]:
+        """List all documents in Azure Blob Storage."""
         blobs = self.container.list_blobs()
         documents = []
         for blob in blobs:
@@ -55,7 +58,6 @@ class DocumentRepositoryBlob:
                         title=blob.name.split("_", 1)[1],
                         file_path=blob.name,
                         page_count=0,
-                        processed_at=None,
                     )
                 )
         return documents
