@@ -6,7 +6,18 @@ from src.config.dependencies import (
     get_user_repository,
     get_password_hasher,
     get_token_generator,
+    get_current_user,
 )
+
+
+def get_mock_current_user():
+    """Get a mock current user for testing."""
+    user = Mock()
+    user.user_id = 1
+    user.username = "testuser"
+    user.email = "test@example.com"
+    user.role = "user"
+    return user
 
 
 class TestHealthEndpoint:
@@ -132,6 +143,11 @@ class TestDocumentsEndpoints:
     def setup_method(self):
         """Setup."""
         self.client = TestClient(app)
+        app.dependency_overrides[get_current_user] = get_mock_current_user
+
+    def teardown_method(self):
+        """Cleanup."""
+        app.dependency_overrides.clear()
 
     def test_list_documents_empty(self):
         """Test list documents when there are none."""
@@ -148,3 +164,10 @@ class TestDocumentsEndpoints:
         response = self.client.get("/api/documents/99999")
 
         assert response.status_code in [404, 422]
+
+    def test_list_documents_unauthorized(self):
+        """Test list documents without auth returns 401."""
+        app.dependency_overrides.clear()
+        response = self.client.get("/api/documents/")
+
+        assert response.status_code == 401

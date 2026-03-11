@@ -64,13 +64,13 @@ class TestDocumentEntity:
         doc = Document(
             document_id=1,
             title="Test Document",
-            file_path="/path/to/file.pdf",
+            file_path="1_test-document.pdf",
             page_count=10,
         )
 
         assert doc.document_id == 1
         assert doc.title == "Test Document"
-        assert doc.file_path == "/path/to/file.pdf"
+        assert doc.file_path == "1_test-document.pdf"
         assert doc.page_count == 10
         assert doc.status == DocumentStatus.PENDING
 

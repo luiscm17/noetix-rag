@@ -14,9 +14,11 @@ class DocumentStatus(str, Enum):
 class Document(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    document_id: Optional[int] = Field(default=None, description="Document ID")
-    title: str = Field(..., min_length=4, max_length=255, description="Document title")
-    file_path: str = Field(..., description="File path")
+    document_id: Optional[int] = Field(
+        default=None, description="Document ID (incremental)"
+    )
+    title: str = Field(..., min_length=1, max_length=255, description="Document title")
+    file_path: str = Field(..., description="File path in blob storage")
     page_count: int = Field(0, ge=0, description="Number of pages")
     created_at: Optional[datetime] = Field(default=None, description="Created at")
     updated_at: Optional[datetime] = Field(default=None, description="Updated at")

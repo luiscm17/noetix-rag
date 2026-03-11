@@ -1,11 +1,16 @@
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status
+from typing import Optional
+
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status, Path
 import uuid
+import re
 from datetime import datetime
 from src.domain.entities.document import Document
+from src.domain.entities.user import User
 from src.infrastructure.repositories.document_repository_blob import (
     DocumentRepositoryBlob,
 )
 from src.api.schemas.documents import DocumentUpdate, DocumentResponse
+from src.config.dependencies import get_current_user
 
 
 router = APIRouter()
@@ -16,14 +21,19 @@ def get_repo() -> DocumentRepositoryBlob:
 
 
 @router.get("/")
-async def list_documents(repo: DocumentRepositoryBlob = Depends(get_repo)):
+async def list_documents(
+    current_user: User = Depends(get_current_user),
+    repo: DocumentRepositoryBlob = Depends(get_repo),
+):
     documents = repo.list_documents()
     return {"documents": documents}
 
 
 @router.get("/{document_id}")
 async def get_document(
-    document_id: int, repo: DocumentRepositoryBlob = Depends(get_repo)
+    document_id: int = Path(..., description="Document ID"),
+    current_user: User = Depends(get_current_user),
+    repo: DocumentRepositoryBlob = Depends(get_repo),
 ):
     """Get a document by its ID."""
     document = await repo.get_document(document_id)
@@ -34,29 +44,34 @@ async def get_document(
 
 @router.post("/upload")
 async def upload_document(
-    file: UploadFile = File(...), repo: DocumentRepositoryBlob = Depends(get_repo)
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    repo: DocumentRepositoryBlob = Depends(get_repo),
 ):
     """Upload a new document."""
     content = await file.read()
     filename = file.filename or f"document_{uuid.uuid4()}"
+
+    safe_name = re.sub(r"[^\w\-.]", "_", filename.rsplit(".", 1)[0])
     document = Document(
-        document_id=int(uuid.uuid4()),
+        document_id=None,
         title=filename,
-        file_path=filename,
+        file_path=safe_name,
         page_count=0,
         updated_at=datetime.now(),
     )
-    await repo.save_document(document, content)
+    saved_doc = await repo.save_document(document, content)
     return {
         "message": "Document uploaded successfully",
-        "document_id": document.document_id,
+        "document_id": saved_doc.document_id,
     }
 
 
 @router.patch("/{document_id}", response_model=DocumentResponse)
 async def update_document(
-    document_id: int,
-    request: DocumentUpdate,
+    document_id: int = Path(..., description="Document ID"),
+    request: Optional[DocumentUpdate] = None,
+    current_user: User = Depends(get_current_user),
     repo: DocumentRepositoryBlob = Depends(get_repo),
 ):
     """Update document metadata."""
@@ -66,7 +81,7 @@ async def update_document(
 
     updated_doc = Document(
         document_id=document_id,
-        title=request.title or existing.title,
+        title=request.title or existing.title if request else existing.title,
         file_path=existing.file_path,
         page_count=existing.page_count,
         updated_at=datetime.now(),
@@ -84,7 +99,8 @@ async def update_document(
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(
-    document_id: int,
+    document_id: int = Path(..., description="Document ID"),
+    current_user: User = Depends(get_current_user),
     repo: DocumentRepositoryBlob = Depends(get_repo),
 ):
     """Delete a document."""
