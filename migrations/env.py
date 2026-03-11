@@ -7,6 +7,7 @@ from alembic import context
 
 # Import Base from our connection module
 from src.infrastructure.db.connection import Base
+from src.infrastructure.db import models  # noqa: F401 - Import models to register them with Base.metadata
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
