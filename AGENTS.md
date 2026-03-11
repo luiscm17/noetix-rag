@@ -11,27 +11,24 @@ Python-based AI agent project using FastAPI. Supports multiple AI providers (Ope
 ## Build, Lint, and Test Commands
 
 ### Installation & Running
-
 ```bash
-uv sync                                    # Install dependencies
-uv run python -m src.main                 # Run main app
-uv run uvicorn src.main:app --reload      # Run FastAPI with hot reload
-cp .env.example .env                      # Set up environment variables
+uv sync                           # Install dependencies
+uv run python -m src.main         # Run main app
+uv run uvicorn src.main:app --reload  # Run with hot reload
+cp .env.example .env              # Set up environment variables
 ```
 
 ### Linting & Type Checking
-
 ```bash
-uv run ruff check .                       # Lint with ruff
-uv run ruff format .                      # Format code
-uv run mypy src/                          # Type check with mypy
+uv run ruff check .               # Lint with ruff
+uv run ruff format .              # Format code
+uv run mypy src/                 # Type check with mypy
 ```
 
 ### Testing
-
 ```bash
 uv run pytest                             # Run all tests
-uv run pytest tests/unit/                 # Run unit tests only (recommended)
+uv run pytest tests/unit/                 # Run unit tests (recommended)
 uv run pytest tests/test_file.py          # Run single test file
 uv run pytest tests/test_file.py::test_fn # Run single test function
 uv run pytest -k "pattern"                # Run tests matching pattern
@@ -39,20 +36,14 @@ uv run pytest -v                          # Verbose output
 ```
 
 ### Database Migrations (Alembic)
-
 ```bash
 uv run alembic current                    # Check current migration
-uv run alembic upgrade head               # Run all pending migrations
+uv run alembic upgrade head               # Run pending migrations
 uv run alembic downgrade -1               # Rollback last migration
-uv run alembic revision --autogenerate -m "message"  # Create new migration
+uv run alembic revision --autogenerate -m "message"  # Create migration
 ```
 
----
-
-## Before Committing
-
-Always verify your changes before committing:
-
+### Before Committing
 ```bash
 uv run ruff check . && uv run ruff format . && uv run mypy src/ && uv run pytest tests/unit/
 ```
@@ -93,11 +84,6 @@ class User(BaseModel):
     email: EmailStr
 ```
 
-### Docstrings
-- Use triple double-quotes `"""`
-- Present tense, third person
-- Keep brief for simple functions
-
 ### Error Handling
 - Use specific exception types (`ValueError`, `RuntimeError`, etc.)
 - Provide descriptive error messages
@@ -108,32 +94,23 @@ class User(BaseModel):
 ## Project Structure (Clean Architecture)
 
 ```
-mh-agent/
-├── src/
-│   ├── config/                      # Settings, dependencies
-│   ├── domain/                     # Entities, interfaces (ports)
-│   ├── application/use_cases/     # Business logic
-│   ├── infrastructure/             # Adapters (repositories, services)
-│   ├── api/routes/                 # FastAPI endpoints
-│   └── agents/                     # AI Agents
-├── tests/
-│   ├── unit/                       # Fast, no external deps
-│   ├── integration/                # Requires PostgreSQL + Azurite
-│   └── http/                       # REST Client tests
-├── migrations/                     # Alembic
-├── pyproject.toml
-└── .env
+src/
+├── config/              # Settings, dependencies
+├── domain/             # Entities, interfaces (ports)
+├── application/        # Use cases (business logic)
+├── infrastructure/     # Adapters (repositories, services)
+├── api/routes/         # FastAPI endpoints
+└── agents/             # AI Agents
+tests/
+├── unit/               # Fast, no external deps
+├── integration/        # Requires PostgreSQL + Azurite
+└── http/               # REST Client tests
+migrations/
 ```
 
 ### Key Patterns
 
-**Interface Pattern** (domain → infrastructure):
-```python
-# domain/interfaces/user_repository.py
-class IUserRepository(ABC):
-    @abstractmethod
-    def get_by_id(self, user_id: int) -> Optional[User]: pass
-```
+**Interface Pattern**: `class IUserRepository(ABC): @abstractmethod ...`
 
 **Use Case Pattern**:
 ```python
@@ -142,10 +119,10 @@ class RegisterUserUseCase:
         self._user_repo = user_repo
     
     def execute(self, request: RegisterUserRequest) -> RegisterUserResponse:
-        pass
+        ...
 ```
 
-**Dependency Injection** (FastAPI):
+**Dependency Injection**:
 ```python
 def get_user_repository(session: Session = Depends(get_db)) -> IUserRepository:
     return UserRepository(session)
@@ -166,28 +143,14 @@ def get_user_repository(session: Session = Depends(get_db)) -> IUserRepository:
 
 ### Mocking Pattern
 ```python
-from src.config.dependencies import get_user_repository, get_password_hasher
-
-def test_register_success(self):
-    mock_repo = Mock()
-    mock_hasher = Mock()
-    
-    app.dependency_overrides[get_user_repository] = lambda: mock_repo
-    app.dependency_overrides[get_password_hasher] = lambda: mock_hasher
+app.dependency_overrides[get_user_repository] = lambda: mock_repo
 ```
 
 ---
 
 ## Common Issues
 
-### Migrations
 - Run `alembic upgrade head` after creating new models
 - Import models in `migrations/env.py`: `from src.infrastructure.db import models`
-
-### Test Failures
 - Clear `app.dependency_overrides` in `teardown_method`
 - Use unique emails in tests to avoid DB conflicts
-
-### Pydantic Deprecation
-- Use `ConfigDict` instead of `class Config`
-- Use `field_validator` for validation
