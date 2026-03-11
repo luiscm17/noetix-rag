@@ -6,12 +6,15 @@ from src.config.settings import BlobStorageSettings
 
 class DocumentRepositoryBlob:
     """Adapter: implement the contract of IDocumentRepository using Azure Blob Storage."""
+
     def __init__(
         self,
         connection_string: str | None = None,
         container_name: str | None = None,
     ):
-        conn_str = connection_string or BlobStorageSettings.AZURE_STORAGE_CONNECTION_STRING
+        conn_str = (
+            connection_string or BlobStorageSettings.AZURE_STORAGE_CONNECTION_STRING
+        )
         container = container_name or BlobStorageSettings.AZURE_STORAGE_CONTAINER
 
         if not conn_str:
@@ -61,3 +64,36 @@ class DocumentRepositoryBlob:
                     )
                 )
         return documents
+
+    async def update_document(self, document: Document) -> Optional[Document]:
+        """Update a document in Azure Blob Storage."""
+        blob_name = f"{document.document_id}_{document.title}"
+        blob_client = self.container.get_blob_client(blob_name)
+        if not blob_client.exists():
+            return None
+
+        blobs = self.container.list_blobs()
+        for blob in blobs:
+            if blob.name.startswith(f"{document.document_id}_"):
+                old_blob = self.container.get_blob_client(blob.name)
+                content = old_blob.download_blob().readall()
+                old_blob.delete_blob()
+                blob_client.upload_blob(data=content, overwrite=True)
+                break
+
+        return Document(
+            document_id=document.document_id,
+            title=document.title,
+            file_path=blob_name,
+            page_count=0,
+        )
+
+    async def delete_document(self, document_id: int) -> bool:
+        """Delete a document from Azure Blob Storage."""
+        blobs = self.container.list_blobs()
+        for blob in blobs:
+            if blob.name.startswith(f"{document_id}_"):
+                blob_client = self.container.get_blob_client(blob.name)
+                blob_client.delete_blob()
+                return True
+        return False
