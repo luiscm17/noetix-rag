@@ -15,3 +15,28 @@ wheels/
 # Agents
 .agents
 .windsurf
+
+# Coverage
+.coverage
+
+# VS Code workspace settings
+.vscode/
+
+# Azurite local emulator files
+__azurite_db_blob*.json
+__blobstorage__/
+
+# Bicep compiled JSON output
+infra/main.json
+
+# Root-level init (not needed)
+/__init__.py
+
+# Personal notes
+recur.md
+
+# Pytest cache
+.pytest_cache/
+
+# Ruff cache
+.ruff_cache/
