@@ -1,30 +1,19 @@
 import uuid
 from typing import List, Dict, Any, Optional
 
-from chromadb.utils import embedding_functions
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from src.config.settings import AgentSettings, QdrantSettings, ChunkingSettings
+from src.rag.pipeline.embedding import EmbeddingService
 
 
 class VectorStore:
     def __init__(self):
         AgentSettings.validate_llm_embedding_settings()
 
-        embedding_endpoint = AgentSettings.LLM_EMBEDDING_ENDPOINT
-        embedding_model = AgentSettings.LLM_EMBEDDING_MODEL
-        embedding_apikey = AgentSettings.LLM_EMBEDDING_APIKEY
-        assert embedding_endpoint is not None
-        assert embedding_model is not None
-        assert embedding_apikey is not None
-
+        self._embedding = EmbeddingService()
         self.client = QdrantClient(**QdrantSettings.get_qdrant_client_config())
-        self.embedding_function = embedding_functions.OpenAIEmbeddingFunction(
-            api_key=embedding_apikey,
-            model_name=embedding_model,
-            api_base=embedding_endpoint,
-        )
 
         self._ensure_collection_exists()
 
@@ -54,12 +43,13 @@ class VectorStore:
     def vectorize_and_store_chunks(self, chunks: List[Dict[str, Any]]) -> int:
         points = []
 
-        for chunk in chunks:
-            embedding = self.embedding_function([chunk["text"]])
+        texts = [chunk["text"] for chunk in chunks]
+        embeddings = self._embedding.embed(texts)
 
+        for chunk, embedding in zip(chunks, embeddings):
             point = PointStruct(
                 id=str(uuid.uuid4()),
-                vector=list(embedding[0]),
+                vector=embedding,
                 payload={
                     "text": chunk["text"],
                     "source": chunk["metadata"]["source"],
@@ -85,7 +75,8 @@ class VectorStore:
         if limit is None:
             limit = ChunkingSettings.CHUNK_LIMIT
 
-        query_vector = list(self.embedding_function([query])[0])
+        query_embeddings = self._embedding.embed([query])
+        query_vector = query_embeddings[0]
 
         search_results = self.client.query_points(
             collection_name=QdrantSettings.COLLECTION_NAME,
