@@ -2,7 +2,7 @@ from typing import Any
 
 from agent_framework.orchestrations import GroupChatBuilder
 from agent_framework._workflows._agent import WorkflowAgent
-from agent_framework import InMemoryHistoryProvider
+from agent_framework.redis import RedisHistoryProvider
 
 from src.agents.rag_agent import rag_agent
 from src.agents.socratic_agent import socratic_agent
@@ -25,9 +25,10 @@ class AgentOrchestrator:
             orchestrator_agent=triage.agent,
         ).build()
 
-        self._history_provider = InMemoryHistoryProvider(
-            source_id="chat_history",
+        self._history_provider = RedisHistoryProvider(
+            redis_url="redis://localhost:6379",
             load_messages=True,
+            key_prefix="chat_messages",
         )
 
         self.agent = WorkflowAgent(
@@ -46,15 +47,16 @@ class AgentOrchestrator:
 
         messages = result.messages if hasattr(result, "messages") else []
 
-        texts = []
+        assistant_texts = []
         for msg in messages:
-            if hasattr(msg, "text") and msg.text and msg.text != message:
-                if "termination" in msg.text.lower():
-                    continue
-                texts.append(msg.text)
+            if hasattr(msg, "role") and msg.role == "assistant":
+                if hasattr(msg, "text") and msg.text:
+                    if "termination" in msg.text.lower():
+                        continue
+                    assistant_texts.append(msg.text)
 
-        if texts:
-            return texts[-1]
+        if assistant_texts:
+            return assistant_texts[-1]
 
         return str(result)[:500] if len(str(result)) > 500 else str(result)
 
