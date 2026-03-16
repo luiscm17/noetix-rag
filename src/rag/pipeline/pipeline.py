@@ -11,6 +11,6 @@ def process_document_from_blob(blob_name: str) -> int:
     markdown = processor.process_pdf_from_azure(blob_name)
 
     doc_md = f"{blob_name.rsplit('.', 1)[0]}.md"
-    chunks = chunker.chunk_document_from_azure(doc_md)
+    chunks = chunker.chunk_document(doc_md)
 
     return vector_store.vectorize_and_store_chunks(chunks)

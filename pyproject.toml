@@ -9,6 +9,8 @@ dependencies = [
     "alembic>=1.18.4",
     "azure-storage-blob>=12.29.0b1",
     "bcrypt>=5.0.0",
+    "chunking-evaluation",
+    "docling>=2.80.0",
     "dotenv>=0.9.9",
     "fastapi[standard]>=0.135.1",
     "psycopg>=3.3.3",
@@ -16,6 +18,7 @@ dependencies = [
     "psycopg2-binary>=2.9.11",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
+    "qdrant-client>=1.17.0",
     "sqlalchemy>=2.1.0b1",
     "uvicorn>=0.41.0",
 ]
@@ -35,6 +38,9 @@ test = [
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.uv.sources]
+chunking-evaluation = { git = "https://github.com/brandonstarxel/chunking_evaluation.git" }
 
 
 
