@@ -17,9 +17,14 @@ class AgentSettings:
     OLLAMA_MODEL_ID: Optional[str] = os.getenv("OLLAMA_MODEL_ID")
     OLLAMA_ENDPOINT: Optional[str] = os.getenv("OLLAMA_ENDPOINT")
 
-    LLM_EMBEDDING_ENDPOINT: Optional[str] = os.getenv("LLM_EMBEDDING_ENDPOINT")
-    LLM_EMBEDDING_MODEL: Optional[str] = os.getenv("LLM_EMBEDDING_MODEL")
+    LLM_EMBEDDING_ENDPOINT: str = os.getenv("LLM_EMBEDDING_ENDPOINT", "")
+    LLM_EMBEDDING_MODEL: str = os.getenv(
+        "LLM_EMBEDDING_MODEL", "text-embedding-3-large"
+    )
     LLM_EMBEDDING_APIKEY: Optional[str] = os.getenv("LLM_EMBEDDING_APIKEY")
+    LLM_EMBEDDING_API_VERSION: str = os.getenv(
+        "LLM_EMBEDDING_API_VERSION", "2024-02-01"
+    )
 
     @classmethod
     def ai_project_settings(cls) -> None:
@@ -94,7 +99,7 @@ class QdrantSettings:
     QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
     QDRANT_API_KEY: Optional[str] = os.getenv("QDRANT_API_KEY")
     COLLECTION_NAME: str = "document_chunks"
-    VECTOR_SIZE: int = 1024
+    VECTOR_SIZE: int = 3072
     BATCH_SIZE: int = 100
     SCORE_THRESHOLD: float = 0.3
 
@@ -104,7 +109,7 @@ class QdrantSettings:
 
 
 class ChunkingSettings:
-    MAX_CHUNK_SIZE: int = 600
+    MAX_CHUNK_SIZE: int = 800
     MIN_CHUNK_SIZE: int = 200
     CHUNK_LIMIT: int = 5
 
