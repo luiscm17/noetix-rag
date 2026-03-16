@@ -14,5 +14,5 @@ class ChatRequest(BaseModel):
 @chat_router.post("/chat")
 async def chat(request: ChatRequest):
     """Chat endpoint with handoff orchestration."""
-    response = await get_response(request.message)
+    response = await get_response(request.message, session_id=request.session_id)
     return {"response": response, "session_id": request.session_id}
