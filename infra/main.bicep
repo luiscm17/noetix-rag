@@ -38,6 +38,16 @@ module aiProjectModule './modules/project.bicep' = {
   }
 }
 
+// Deploy Search service using module
+module searchServiceModule './modules/search.bicep' = {
+  name: 'searchServiceDeployment'
+  params: {
+    resourceName: aiFoundry.name
+    searchName: '${namePrefix}-search-${uniqueSuffix}'
+    location: location
+  }
+}
+
 // Deploy Model using module
 module modelDeploymentModule './modules/model-deployment.bicep' = {
   name: 'modelDeploymentDeployment'
@@ -55,3 +65,5 @@ output foundryEndpoint string = aiFoundry.properties.endpoint
 output foundryIdentityPrincipalId string = aiFoundry.identity.principalId
 output projectId string = aiProjectModule.outputs.projectId
 output deploymentName string = modelDeploymentModule.outputs.deploymentName
+output searchName string = searchServiceModule.outputs.searchName
+output searchEndpoint string = searchServiceModule.outputs.searchEndpoint
