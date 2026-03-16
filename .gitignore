@@ -20,7 +20,6 @@ wheels/
 .coverage
 
 # VS Code workspace settings
-.vscode/
 
 # Azurite local emulator files
 __azurite_db_blob*.json
