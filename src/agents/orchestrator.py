@@ -1,13 +1,14 @@
 from typing import Any
 
 from agent_framework.orchestrations import GroupChatBuilder
-from agent_framework._workflows._agent import WorkflowAgent
 from agent_framework.redis import RedisHistoryProvider
 
+from src.agents.memory_provider import MemoryProvider
 from src.agents.rag_agent import rag_agent
 from src.agents.socratic_agent import socratic_agent
 from src.agents.teacher_agent import teacher_agent
 from src.agents.triage_agent import triage_agent
+from src.config.settings import RedisSettings
 
 
 class AgentOrchestrator:
@@ -21,21 +22,23 @@ class AgentOrchestrator:
             termination_condition=lambda msgs: sum(
                 1 for m in msgs if hasattr(m, "role") and m.role == "assistant"
             )
-            >= 2,
+            >= 5,
             orchestrator_agent=triage.agent,
         ).build()
 
         self._history_provider = RedisHistoryProvider(
-            redis_url="redis://localhost:6379",
+            redis_url=RedisSettings.get_redis_url(),
             load_messages=True,
-            key_prefix="chat_messages",
+            key_prefix=RedisSettings.REDIS_KEY_PREFIX,
         )
 
-        self.agent = WorkflowAgent(
-            workflow=workflow,
+        self._memory_provider = MemoryProvider()
+
+        self.agent = workflow.as_agent(
             name="AgentOrchestrator",
-            context_providers=[self._history_provider],
         )
+
+        self.agent.context_providers = [self._history_provider, self._memory_provider]
 
     async def run(self, message: str, session_id: str | None = None) -> str:
         """Run the group chat workflow and return the response."""

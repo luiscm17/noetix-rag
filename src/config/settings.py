@@ -99,6 +99,7 @@ class QdrantSettings:
     QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
     QDRANT_API_KEY: Optional[str] = os.getenv("QDRANT_API_KEY")
     COLLECTION_NAME: str = "document_chunks"
+    MEMORY_COLLECTION: str = "user_memories"
     VECTOR_SIZE: int = 3072
     BATCH_SIZE: int = 100
     SCORE_THRESHOLD: float = 0.3
@@ -106,6 +107,16 @@ class QdrantSettings:
     @classmethod
     def get_qdrant_client_config(cls) -> dict:
         return {"url": cls.QDRANT_URL, "api_key": cls.QDRANT_API_KEY, "timeout": 60}
+
+
+class RedisSettings:
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
+    REDIS_KEY_PREFIX: str = os.getenv("REDIS_KEY_PREFIX", "chat_messages")
+    REDIS_PORT: int = 6379
+
+    @classmethod
+    def get_redis_url(cls) -> str:
+        return cls.REDIS_URL
 
 
 class ChunkingSettings:
