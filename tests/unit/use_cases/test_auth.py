@@ -1,5 +1,4 @@
-import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 from src.application.use_cases.auth.register_user import (
     RegisterUserUseCase,
     RegisterUserRequest,
@@ -37,7 +36,7 @@ class TestRegisterUserUseCase:
             role=UserRole.USER,
         )
         self.mock_user_repo.create.return_value = saved_user
-        self.mock_token_gen.generate.return_value = "jwt_token"
+        self.mock_token_gen.generate.return_value = ("jwt_token", "jti-123")
 
         request = RegisterUserRequest(
             email="test@example.com", username="testuser", password="password123"
@@ -107,7 +106,7 @@ class TestLoginUserUseCase:
         )
         self.mock_user_repo.get_by_email.return_value = user
         self.mock_hasher.verify.return_value = True
-        self.mock_token_gen.generate.return_value = "jwt_token"
+        self.mock_token_gen.generate.return_value = ("jwt_token", "jti-123")
 
         request = LoginRequest(email="test@example.com", password="password123")
 
