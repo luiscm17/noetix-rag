@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from src.application.use_cases.auth.register_user import (
     RegisterUserUseCase,
     RegisterUserRequest,
@@ -12,21 +14,26 @@ from src.api.schemas.auth import (
     UserResponse,
 )
 
-
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post(
     "/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED
 )
+@limiter.limit("5/minute")
 async def register(
-    request: RegisterRequest,
+    request: Request,
+    register_request: RegisterRequest,
     use_case: RegisterUserUseCase = Depends(get_register_user_use_case),
 ):
     """Register a new user and return an authentication token."""
     result = use_case.execute(
         RegisterUserRequest(
-            email=request.email, username=request.username, password=request.password
+            email=register_request.email,
+            username=register_request.username,
+            password=register_request.password,
         )
     )
 
@@ -54,12 +61,15 @@ async def register(
 
 
 @router.post("/login", response_model=AuthResponse)
+@limiter.limit("5/minute")
 async def login(
-    request: LoginSchema, use_case: LoginUserUseCase = Depends(get_login_user_use_case)
+    request: Request,
+    login_request: LoginSchema,
+    use_case: LoginUserUseCase = Depends(get_login_user_use_case),
 ):
     """Login a user and return a JWT token."""
     result = use_case.execute(
-        LoginRequest(email=request.email, password=request.password)
+        LoginRequest(email=login_request.email, password=login_request.password)
     )
 
     if not result.success:
