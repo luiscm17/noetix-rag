@@ -1,9 +1,10 @@
-import pytest
 from unittest.mock import Mock
 from src.domain.interfaces.user_repository import IUserRepository
 from src.domain.interfaces.password_hasher import IPasswordHasher
 from src.domain.interfaces.token_generator import ITokenGenerator
-from src.domain.entities.user import User, UserRole
+from src.domain.interfaces.document_repository import IDocumentRepository
+from src.domain.entities.user import User
+from src.domain.entities.document import Document
 
 
 class TestIUserRepository:
@@ -71,3 +72,47 @@ class TestITokenGenerator:
 
         assert mock_gen.generate(user) == "jwt_token"
         assert mock_gen.decode("jwt_token") == {"sub": "1"}
+
+
+class TestIDocumentRepository:
+    """Tests for IDocumentRepository interface."""
+
+    def test_interface_has_required_methods(self):
+        """Test that the interface has the required methods."""
+        assert hasattr(IDocumentRepository, "save_document")
+        assert hasattr(IDocumentRepository, "get_document")
+        assert hasattr(IDocumentRepository, "list_documents")
+
+    def test_implementation_with_mock(self):
+        """Test implementation with mock."""
+        mock_repo = Mock(spec=IDocumentRepository)
+
+        doc = Document(
+            document_id=1,
+            title="Test Doc",
+            file_path="/test.pdf",
+            page_count=10,
+        )
+
+        async def mock_save(doc, content):
+            return None
+
+        async def mock_get(doc_id):
+            return doc
+
+        async def mock_list():
+            return [doc]
+
+        mock_repo.save_document = mock_save
+        mock_repo.get_document = mock_get
+        mock_repo.list_documents = mock_list
+
+        import asyncio
+
+        asyncio.run(mock_repo.save_document(doc, b"content"))
+        result = asyncio.run(mock_repo.get_document(1))
+        assert result is not None
+        assert result.title == "Test Doc"
+
+        results = asyncio.run(mock_repo.list_documents())
+        assert len(results) == 1

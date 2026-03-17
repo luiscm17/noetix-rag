@@ -15,6 +15,7 @@ class Document(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     document_id: Optional[int] = Field(default=None, description="Document ID")
+    user_id: Optional[int] = Field(default=None, description="Owner user ID")
     title: str = Field(..., min_length=4, max_length=255, description="Document title")
     file_path: str = Field(..., description="File path")
     page_count: int = Field(0, ge=0, description="Number of pages")

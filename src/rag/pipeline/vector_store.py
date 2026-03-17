@@ -40,6 +40,29 @@ class VectorStore:
                 ),
             )
 
+    def _ensure_memory_collection_exists(self):
+        try:
+            collections = self.client.get_collections()
+            collection_exists = any(
+                c.name == QdrantSettings.MEMORY_COLLECTION
+                for c in collections.collections
+            )
+
+            if not collection_exists:
+                self.client.create_collection(
+                    collection_name=QdrantSettings.MEMORY_COLLECTION,
+                    vectors_config=VectorParams(
+                        size=QdrantSettings.VECTOR_SIZE, distance=Distance.COSINE
+                    ),
+                )
+        except Exception:
+            self.client.create_collection(
+                collection_name=QdrantSettings.MEMORY_COLLECTION,
+                vectors_config=VectorParams(
+                    size=QdrantSettings.VECTOR_SIZE, distance=Distance.COSINE
+                ),
+            )
+
     def vectorize_and_store_chunks(self, chunks: List[Dict[str, Any]]) -> int:
         points = []
 
@@ -96,6 +119,59 @@ class VectorStore:
                         "source": payload.get("source", ""),
                         "filename": payload.get("filename", ""),
                         "container": payload.get("container", ""),
+                        "score": hit.score,
+                    }
+                )
+
+        return results
+
+    def store_memory(self, text: str) -> int:
+        """Store a memory in the memory collection."""
+        self._ensure_memory_collection_exists()
+
+        embeddings = self._embedding.embed([text])
+        embedding = embeddings[0]
+
+        point = PointStruct(
+            id=str(uuid.uuid4()),
+            vector=embedding,
+            payload={
+                "text": text,
+                "source": "memory",
+                "filename": "user_memory",
+                "container": "long_term_memory",
+            },
+        )
+
+        self.client.upsert(
+            collection_name=QdrantSettings.MEMORY_COLLECTION,
+            points=[point],
+        )
+
+        return 1
+
+    def search_memories(self, query: str, limit: int = 3) -> List[Dict[str, Any]]:
+        """Search memories in the memory collection."""
+        self._ensure_memory_collection_exists()
+
+        query_embeddings = self._embedding.embed([query])
+        query_vector = query_embeddings[0]
+
+        search_results = self.client.query_points(
+            collection_name=QdrantSettings.MEMORY_COLLECTION,
+            query=query_vector,
+            limit=limit,
+            score_threshold=0.3,
+            with_payload=True,
+        ).points
+
+        results = []
+        for hit in search_results:
+            payload = hit.payload
+            if payload:
+                results.append(
+                    {
+                        "text": payload.get("text", ""),
                         "score": hit.score,
                     }
                 )

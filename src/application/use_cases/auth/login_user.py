@@ -47,6 +47,6 @@ class LoginUserUseCase:
             )
 
         # Generar token
-        token = self._token_gen.generate(user)
+        token, _ = self._token_gen.generate(user)
 
         return LoginResponse(user=user, access_token=token, success=True)

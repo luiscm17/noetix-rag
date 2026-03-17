@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
 
 class AgentSettings:
     AI_PROJECT_ENDPOINT: Optional[str] = os.getenv("AI_PROJECT_ENDPOINT")
@@ -85,20 +87,33 @@ class DBSettings:
 
 
 class AuthSettings:
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "secret_key_for_dev_only")
+    JWT_SECRET_KEY: Optional[str] = os.getenv("JWT_SECRET_KEY")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     JWT_EXPIRE_DELTA: int = int(os.getenv("JWT_EXPIRE_DELTA", "1800"))
 
     @classmethod
     def validate_auth_settings(cls) -> None:
         if not cls.JWT_SECRET_KEY:
-            raise ValueError("JWT_SECRET_KEY is not configured")
+            raise ValueError("JWT_SECRET_KEY environment variable is required")
+
+        min_length = 32
+        if len(cls.JWT_SECRET_KEY) < min_length:
+            raise ValueError(
+                f"JWT_SECRET_KEY must be at least {min_length} characters long"
+            )
+
+        if (
+            ENVIRONMENT == "production"
+            and cls.JWT_SECRET_KEY == "secret_key_for_dev_only"
+        ):
+            raise ValueError("Cannot use default secret key in production environment")
 
 
 class QdrantSettings:
     QDRANT_URL: str = os.getenv("QDRANT_URL", "http://localhost:6333")
     QDRANT_API_KEY: Optional[str] = os.getenv("QDRANT_API_KEY")
     COLLECTION_NAME: str = "document_chunks"
+    MEMORY_COLLECTION: str = "user_memories"
     VECTOR_SIZE: int = 3072
     BATCH_SIZE: int = 100
     SCORE_THRESHOLD: float = 0.3
@@ -106,6 +121,16 @@ class QdrantSettings:
     @classmethod
     def get_qdrant_client_config(cls) -> dict:
         return {"url": cls.QDRANT_URL, "api_key": cls.QDRANT_API_KEY, "timeout": 60}
+
+
+class RedisSettings:
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379")
+    REDIS_KEY_PREFIX: str = os.getenv("REDIS_KEY_PREFIX", "chat_messages")
+    REDIS_PORT: int = 6379
+
+    @classmethod
+    def get_redis_url(cls) -> str:
+        return cls.REDIS_URL
 
 
 class ChunkingSettings:

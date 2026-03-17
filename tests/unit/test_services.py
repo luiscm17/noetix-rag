@@ -58,11 +58,13 @@ class TestJWTGenerator:
             role=UserRole.USER,
         )
 
-        token = self.token_gen.generate(user)
+        token, jti = self.token_gen.generate(user)
 
         assert token is not None
         assert isinstance(token, str)
         assert len(token) > 0
+        assert jti is not None
+        assert isinstance(jti, str)
 
     def test_decode_token(self):
         """Test decoding of token."""
@@ -74,13 +76,14 @@ class TestJWTGenerator:
             role=UserRole.USER,
         )
 
-        token = self.token_gen.generate(user)
+        token, _ = self.token_gen.generate(user)
         payload = self.token_gen.decode(token)
 
         assert payload is not None
         assert payload["sub"] == "1"
         assert payload["email"] == "test@example.com"
         assert payload["role"] == "user"
+        assert "jti" in payload
 
     def test_decode_invalid_token(self):
         """Test decoding of invalid token."""

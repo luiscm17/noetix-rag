@@ -1,6 +1,7 @@
 import pytest
 from src.domain.entities.user import User, UserRole
 from src.domain.entities.document import Document, DocumentStatus
+from src.domain.entities.conversation import Conversation, Message
 
 
 class TestUserEntity:
@@ -94,3 +95,100 @@ class TestDocumentEntity:
         assert doc.page_count == 0
         assert doc.status == DocumentStatus.PENDING
         assert doc.tags is None
+
+
+class TestConversationEntity:
+    """Tests for the Conversation entity."""
+
+    def test_create_conversation(self):
+        """Test create conversation."""
+        conversation = Conversation(
+            user_id=1,
+            document_id=10,
+            conversation_id="conv-123",
+            title="My Research",
+        )
+
+        assert conversation.user_id == 1
+        assert conversation.document_id == 10
+        assert conversation.conversation_id == "conv-123"
+        assert conversation.title == "My Research"
+        assert conversation.created_at is None
+        assert conversation.updated_at is None
+
+    def test_conversation_default_title(self):
+        """Test default title for conversation."""
+        conversation = Conversation(
+            user_id=1,
+            document_id=10,
+            conversation_id="conv-456",
+        )
+
+        assert conversation.title == "Untitled Conversation"
+
+    def test_conversation_with_timestamps(self):
+        """Test conversation with timestamps."""
+        from datetime import datetime
+
+        now = datetime.now()
+        conversation = Conversation(
+            user_id=1,
+            document_id=10,
+            conversation_id="conv-789",
+            title="Test",
+            created_at=now,
+            updated_at=now,
+        )
+
+        assert conversation.created_at == now
+        assert conversation.updated_at == now
+
+
+class TestMessageEntity:
+    """Tests for the Message entity."""
+
+    def test_create_message(self):
+        """Test create message."""
+        message = Message(
+            message_id=1,
+            conversation_id="conv-123",
+            role="user",
+            content="Hello, how are you?",
+        )
+
+        assert message.message_id == 1
+        assert message.conversation_id == "conv-123"
+        assert message.role == "user"
+        assert message.content == "Hello, how are you?"
+        assert message.created_at is None
+
+    def test_message_with_timestamp(self):
+        """Test message with timestamp."""
+        from datetime import datetime
+
+        now = datetime.now()
+        message = Message(
+            message_id=1,
+            conversation_id="conv-123",
+            role="assistant",
+            content="I'm doing well!",
+            created_at=now,
+        )
+
+        assert message.created_at == now
+
+    def test_message_roles(self):
+        """Test different message roles."""
+        user_msg = Message(
+            message_id=1, conversation_id="c1", role="user", content="Question?"
+        )
+        assistant_msg = Message(
+            message_id=2, conversation_id="c1", role="assistant", content="Answer."
+        )
+        system_msg = Message(
+            message_id=3, conversation_id="c1", role="system", content="System prompt"
+        )
+
+        assert user_msg.role == "user"
+        assert assistant_msg.role == "assistant"
+        assert system_msg.role == "system"
