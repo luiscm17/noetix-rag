@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
 
 class AgentSettings:
     AI_PROJECT_ENDPOINT: Optional[str] = os.getenv("AI_PROJECT_ENDPOINT")
@@ -85,14 +87,26 @@ class DBSettings:
 
 
 class AuthSettings:
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "secret_key_for_dev_only")
+    JWT_SECRET_KEY: Optional[str] = os.getenv("JWT_SECRET_KEY")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     JWT_EXPIRE_DELTA: int = int(os.getenv("JWT_EXPIRE_DELTA", "1800"))
 
     @classmethod
     def validate_auth_settings(cls) -> None:
         if not cls.JWT_SECRET_KEY:
-            raise ValueError("JWT_SECRET_KEY is not configured")
+            raise ValueError("JWT_SECRET_KEY environment variable is required")
+
+        min_length = 32
+        if len(cls.JWT_SECRET_KEY) < min_length:
+            raise ValueError(
+                f"JWT_SECRET_KEY must be at least {min_length} characters long"
+            )
+
+        if (
+            ENVIRONMENT == "production"
+            and cls.JWT_SECRET_KEY == "secret_key_for_dev_only"
+        ):
+            raise ValueError("Cannot use default secret key in production environment")
 
 
 class QdrantSettings:
