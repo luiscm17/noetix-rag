@@ -42,6 +42,7 @@ uv run pytest tests/test_file.py          # Run single test file
 uv run pytest tests/test_file.py::test_fn # Run single test function
 uv run pytest -k "pattern"                # Run tests matching pattern/substring
 uv run pytest -v                          # Verbose output
+uv run pytest --cov=src --cov-report=term-missing  # With coverage
 ```
 
 ### Database Migrations (Alembic)
@@ -88,6 +89,7 @@ Follow these rules for maximum compatibility with agent automation and peer deve
 - Use `Optional[X]` for optional arguments, not just `X | None`
 - For I/O ops, use `async def` and always `await` (`never .result()`)
 - Mark async tests with `@pytest.mark.asyncio` so they're picked up
+- Configure `asyncio_mode = "auto"` in `pytest.ini_options` (already set)
 
 ### Formatting & Style
 - Max line length: **100** (`pyproject.toml` enforced by ruff/mypy)
@@ -185,6 +187,7 @@ app.dependency_overrides[get_user_repository] = lambda: mock_repo
 - Test iteratively, frequently, and thoroughly
 - Format and lint after every code edit; do not skip
 - If you detect new environment variables, update `.env.example` for others/agents
+- Project has agent skills in `.agents/skills/` — use the `skill` tool to load them for specialized tasks
 
 ---
 

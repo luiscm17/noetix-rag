@@ -143,6 +143,28 @@ My Test Document
 ------WebKitFormBoundary--
 
 # ============================================
+# CHAT ENDPOINTS (Orchestrator with Handoff)
+# ============================================
+
+### Chat - Non-streaming response
+POST {{baseUrl}}/chat
+Content-Type: application/json
+
+{
+  "message": "What is the capital of China?",
+  "session_id": "session-123"
+}
+
+### Chat - Streaming response (SSE)
+POST {{baseUrl}}/chat/stream
+Content-Type: application/json
+
+{
+  "message": "Explain what machine learning is",
+  "session_id": "session-456"
+}
+
+# ============================================
 # CURL EXAMPLES
 # ============================================
 
