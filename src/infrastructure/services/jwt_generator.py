@@ -1,5 +1,6 @@
 import jwt
 from datetime import datetime, timedelta, timezone
+from typing import cast
 from src.domain.entities.user import User
 from src.domain.interfaces.token_generator import ITokenGenerator
 from src.config.settings import AuthSettings
@@ -10,6 +11,8 @@ class JWTGenerator(ITokenGenerator):
 
     def generate(self, user: User) -> str:
         """Generate a JWT token for the user."""
+        secret_key = cast(str, AuthSettings.JWT_SECRET_KEY)
+
         payload = {
             "sub": str(user.user_id) if user.user_id is not None else "",
             "email": user.email,
@@ -17,16 +20,16 @@ class JWTGenerator(ITokenGenerator):
             "exp": datetime.now(timezone.utc)
             + timedelta(minutes=AuthSettings.JWT_EXPIRE_DELTA),
         }
-        return jwt.encode(
-            payload, AuthSettings.JWT_SECRET_KEY, algorithm=AuthSettings.JWT_ALGORITHM
-        )
+        return jwt.encode(payload, secret_key, algorithm=AuthSettings.JWT_ALGORITHM)
 
     def decode(self, token: str) -> dict:
         """Decode a token JWT and return the payload."""
+        secret_key = cast(str, AuthSettings.JWT_SECRET_KEY)
+
         try:
             return jwt.decode(
                 token,
-                AuthSettings.JWT_SECRET_KEY,
+                secret_key,
                 algorithms=[AuthSettings.JWT_ALGORITHM],
             )
         except jwt.ExpiredSignatureError:
