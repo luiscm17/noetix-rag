@@ -79,7 +79,9 @@ async def create_orchestrator() -> AgentOrchestrator:
     return _orchestrator
 
 
-async def get_response(message: str, session_id: str | None = None) -> str:
+async def get_response(
+    message: str, session_id: str | None = None, user_id: int | None = None
+) -> str:
     """Helper function to get a complete response from the orchestrator."""
     orchestrator = await create_orchestrator()
     return await orchestrator.run(message, session_id=session_id)
