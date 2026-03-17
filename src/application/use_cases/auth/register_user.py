@@ -55,6 +55,6 @@ class RegisterUserUseCase:
         saved_user = self._user_repo.create(user)
 
         # Generate token
-        token = self._token_gen.generate(saved_user)
+        token, _ = self._token_gen.generate(saved_user)
 
         return RegisterUserResponse(user=saved_user, access_token=token, success=True)
