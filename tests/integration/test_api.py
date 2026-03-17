@@ -1,5 +1,4 @@
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock
 from fastapi.testclient import TestClient
 from src.main import app
 from src.config.dependencies import (
@@ -7,6 +6,9 @@ from src.config.dependencies import (
     get_password_hasher,
     get_token_generator,
 )
+from src.api.dependencies import get_current_user
+from src.domain.entities.user import User, UserRole
+from src.api.routes.documents import get_repo
 
 
 class TestHealthEndpoint:
@@ -132,9 +134,25 @@ class TestDocumentsEndpoints:
     def setup_method(self):
         """Setup."""
         self.client = TestClient(app)
+        self.mock_user = User(
+            user_id=1,
+            username="testuser",
+            email="test@example.com",
+            role=UserRole.USER,
+        )
+        self.mock_repo = Mock()
+        self.mock_repo.list_documents.return_value = []
+        self.mock_repo.get_document = AsyncMock(return_value=None)
+
+    def teardown_method(self):
+        """Cleanup."""
+        app.dependency_overrides.clear()
 
     def test_list_documents_empty(self):
         """Test list documents when there are none."""
+        app.dependency_overrides[get_current_user] = lambda: self.mock_user
+        app.dependency_overrides[get_repo] = lambda: self.mock_repo
+
         response = self.client.get("/api/documents/")
 
         assert response.status_code == 200
@@ -145,6 +163,9 @@ class TestDocumentsEndpoints:
 
     def test_get_document_not_found(self):
         """Test get document when it does not exist."""
+        app.dependency_overrides[get_current_user] = lambda: self.mock_user
+        app.dependency_overrides[get_repo] = lambda: self.mock_repo
+
         response = self.client.get("/api/documents/99999")
 
-        assert response.status_code in [404, 422]
+        assert response.status_code == 404
