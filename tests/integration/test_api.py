@@ -63,7 +63,7 @@ class TestAuthEndpoints:
         self.mock_user_repo.create.return_value = user
 
         self.mock_hasher.hash.return_value = "hashed"
-        self.mock_token.generate.return_value = "jwt_token"
+        self.mock_token.generate.return_value = ("jwt_token", "jti-123")
 
         app.dependency_overrides[get_user_repository] = lambda: self.mock_user_repo
         app.dependency_overrides[get_password_hasher] = lambda: self.mock_hasher
