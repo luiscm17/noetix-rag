@@ -2,6 +2,10 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
 from src.infrastructure.services.jwt_generator import JWTGenerator
+from src.infrastructure.services.token_revocation import (
+    get_token_revocation_service,
+    TokenRevocationService,
+)
 from src.infrastructure.repositories.user_repository import UserRepository
 from src.infrastructure.db.connection import get_db
 from src.domain.entities.user import User
@@ -13,6 +17,7 @@ security = HTTPBearer(auto_error=False)
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
+    revocation_service: TokenRevocationService = Depends(get_token_revocation_service),
 ) -> User:
     """Dependency to get the current authenticated user from JWT token."""
     if credentials is None:
@@ -31,6 +36,14 @@ def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    jti = payload.get("jti")
+    if jti and revocation_service.is_revoked(jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
