@@ -1,3 +1,9 @@
+# Reports
+eslint_report.json
+
+# Agent skills
+.agents
+
 # Logs
 logs
 *.log
